@@ -1,11 +1,15 @@
 const express = require("express");
 require("dotenv").config();
 const app = express();
+const cors = require('cors');
 const mongoose = require("mongoose");
 const port = process.env.PORT || 3000; // You can change the port number if needed
 
 app.use(express.json()); // for handling json data use middleware
 app.use(express.urlencoded({ extended: true }));
+
+// Enable CORS
+app.use(cors());
 
 /*  #################################
          CONNECTING TO MONGODB
