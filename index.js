@@ -120,7 +120,96 @@ app.get("/api/billing-list", async (req, res) => {
     });
   }
 });
+// GET:/products/:id -> Return single the product
+app.get("/api/billing-list/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    //console.log(id);
+    const product = await BillingDB.findOne({ _id: id });
+    if (product) {
+      res.status(200).send({
+        success: true, // ***response extra information
+        message: "Return a single product",
+        data: product,
+      });
+    } else {
+      res.status(400).send({
+        success: false,
+        message: "Product not found",
+      });
+    }
+  } catch (error) {
+    res.status(500).send({
+      message: error.message,
+    });
+  }
+});
+/*  #################################
+               UPDATE
+    #################################
+*/
+app.put("/api/update-billing/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    console.log(id);
+    // in update method: 1st need id, 2nd set new value for this update;
+    const updatedProduct = await BillingDB.findByIdAndUpdate(
+      { _id: id },
+      {
+        $set: {
+          name: req.body.name,   // set new value for this update
+          email: req.body.email,
+        },
+      },
+      {new:true} // showing updated data in api
+    );
+    if (updatedProduct) {
+      res.status(200).send({
+        success: true,
+        message: "Updated successfully",
+        data: updatedProduct,
+      });
+    } else {
+      res.status(400).send({
+        success: false,
+        message: "Product was not updated with this id",
+      });
+    }
+  } catch (error) {
+    res.status(500).send({
+      message: error.message,
+    });
+  }
+});
 
+/*  #################################
+               DELETE
+    #################################
+*/
+app.delete("/api/delete-billing/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const productDelete = await BillingDB.findByIdAndDelete({ _id: id }); // showing details of deleted product
+    // const productDelete = await products.deleteOne({_id: id}); // delete normally showing "acknowledgement:true"
+
+    if (productDelete) {
+      res.status(200).send({
+        success: true,
+        message: "Delete successfully",
+        data: productDelete,
+      });
+    } else {
+      res.status(400).send({
+        success: false,
+        message: "Product was not deleted with this id",
+      });
+    }
+  } catch (error) {
+    res.status(500).send({
+      message: error.message,
+    });
+  }
+});
 
 //-------------ROOT PAGE ------------
 app.get("/", (req, res) => {
