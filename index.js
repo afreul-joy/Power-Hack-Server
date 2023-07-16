@@ -3,7 +3,7 @@ require("dotenv").config();
 const app = express();
 const cors = require('cors');
 const mongoose = require("mongoose");
-const port = process.env.PORT || 3000; // You can change the port number if needed
+const port = 4000; // You can change the port number if needed
 
 app.use(express.json()); // for handling json data use middleware
 app.use(express.urlencoded({ extended: true }));
@@ -35,20 +35,20 @@ const connectDB = async () => {
 const billingSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+   // required: true,
   },
   email: {
     type: String,
-    required: true,
+    //required: true,
   },
-  phone: {
-    type: Number,
-    required: true,
-  },
-  amount: {
-    type: Number,
-    required: true,
-  },
+  // phone: {
+  //   type: Number,
+  //   required: true,
+  // },
+  // amount: {
+  //   type: Number,
+  //   required: true,
+  // },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -151,7 +151,7 @@ app.get("/api/billing-list/:id", async (req, res) => {
 app.put("/api/update-billing/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    console.log(id);
+    //console.log(id);
     // in update method: 1st need id, 2nd set new value for this update;
     const updatedProduct = await BillingDB.findByIdAndUpdate(
       { _id: id },
