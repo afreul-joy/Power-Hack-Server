@@ -1,72 +1,28 @@
-const express = require("express");
 require("dotenv").config();
+require("./config/database");
+
+const express = require("express");
 const app = express();
-const cors = require('cors');
-const mongoose = require("mongoose");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const userCollection = require("./models/userCollection");
+const BillingCollection = require("./models/BillingCollection");
+
 const port = 4000; // You can change the port number if needed
 
-app.use(express.json()); // for handling json data use middleware
+app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true }));
-
-// Enable CORS
 app.use(cors());
 
 /*  #################################
-         CONNECTING TO MONGODB
+               CRUD
     #################################
 */
-
-//--------connecting to database----------
-const username = encodeURIComponent(process.env.dbUser); // checking env variable
-const password = encodeURIComponent(process.env.dbPass);
-const dbName = "BillingDBMS"; // Database name
-const url = `mongodb+srv://${username}:${password}@cluster0.vljpp.mongodb.net/${dbName}?retryWrites=true&w=majority`;
-
-const connectDB = async () => {
-  try {
-    await mongoose.connect(url);
-    console.log("Connected to the database");
-  } catch (error) {
-    console.error("Failed to connect to the database:", error);
-  }
-};
-
-//--------create billing schema / STRUCTURE/ SHAPE----------
-const billingSchema = new mongoose.Schema({
-  name: {
-    type: String,
-   // required: true,
-  },
-  email: {
-    type: String,
-    //required: true,
-  },
-  // phone: {
-  //   type: Number,
-  //   required: true,
-  // },
-  // amount: {
-  //   type: Number,
-  //   required: true,
-  // },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-//------------create billing model or collection/table--------------
-const BillingDB = mongoose.model("Billing", billingSchema);
-
-/*  #################################
-                CREATE 
-    #################################
-*/
-// POST: /api/add-billing -> Create a new billing entry
+//----------- POST: /api/add-billing -> Create a new billing entry------------
 app.post("/api/add-billing", async (req, res) => {
   try {
     // Create a new billing document
-    const newBilling = new BillingDB({
+    const newBilling = new BillingCollection({
       name: req.body.name,
       email: req.body.email,
       phone: req.body.phone,
@@ -94,14 +50,10 @@ app.post("/api/add-billing", async (req, res) => {
   }
 });
 
-/*  #################################
-               READ
-    #################################
-*/
-// GET: /products -> Return all the products
+// --------------GET: /products -> Return all the products-----------
 app.get("/api/billing-list", async (req, res) => {
   try {
-    const product = await BillingDB.find();
+    const product = await BillingCollection.find();
     if (product) {
       res.status(200).send({
         success: true, // ***response extra information
@@ -120,12 +72,12 @@ app.get("/api/billing-list", async (req, res) => {
     });
   }
 });
-// GET:/products/:id -> Return single the product
+//------------- GET SINGLE ID Operation ---------------
 app.get("/api/billing-list/:id", async (req, res) => {
   try {
     const id = req.params.id;
     //console.log(id);
-    const product = await BillingDB.findOne({ _id: id });
+    const product = await BillingCollection.findOne({ _id: id });
     if (product) {
       res.status(200).send({
         success: true, // ***response extra information
@@ -144,24 +96,21 @@ app.get("/api/billing-list/:id", async (req, res) => {
     });
   }
 });
-/*  #################################
-               UPDATE
-    #################################
-*/
+//------------- Update Operation ---------------
 app.put("/api/update-billing/:id", async (req, res) => {
   try {
     const id = req.params.id;
     //console.log(id);
     // in update method: 1st need id, 2nd set new value for this update;
-    const updatedProduct = await BillingDB.findByIdAndUpdate(
+    const updatedProduct = await BillingCollection.findByIdAndUpdate(
       { _id: id },
       {
         $set: {
-          name: req.body.name,   // set new value for this update
+          name: req.body.name, // set new value for this update
           email: req.body.email,
         },
       },
-      {new:true} // showing updated data in api
+      { new: true } // showing updated data in api
     );
     if (updatedProduct) {
       res.status(200).send({
@@ -181,15 +130,11 @@ app.put("/api/update-billing/:id", async (req, res) => {
     });
   }
 });
-
-/*  #################################
-               DELETE
-    #################################
-*/
+//------------- Delete Operation ---------------
 app.delete("/api/delete-billing/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const productDelete = await BillingDB.findByIdAndDelete({ _id: id }); // showing details of deleted product
+    const productDelete = await BillingCollection.findByIdAndDelete({ _id: id }); // showing details of deleted product
     // const productDelete = await products.deleteOne({_id: id}); // delete normally showing "acknowledgement:true"
 
     if (productDelete) {
@@ -210,6 +155,96 @@ app.delete("/api/delete-billing/:id", async (req, res) => {
     });
   }
 });
+/*  #################################
+          Authentication
+    #################################
+*/
+app.post("/register", async (req, res) => {
+  console.log(req.body);
+  try {
+    const user = await userCollection.findOne({ email: req.body.email });
+
+    if (user) {
+      return res.status(300).send("user already registered");
+    } else {
+      const newUser = new userCollection({
+        name: req.body.name,
+        password: req.body.password,
+        email: req.body.email,
+      });
+      await newUser
+        .save()
+        .then((user) => {
+          res.send({
+            success: true,
+            message: "User saved successfully",
+            user: {
+              id: user._id,
+              username: user.username,
+            },
+          });
+        })
+        .catch((error) => {
+          res.send("error: " + error.message);
+        });
+    }
+  } catch (error) {
+    res.send("error: " + error.message);
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await userCollection.findOne({
+      email: email,
+      password: password,
+    });
+    if (user && user.password === password) {
+      const token = jwt.sign(
+        {
+          name: user.name,
+          email: user.email,
+        },
+        process.env.SECRET_KEY,
+        {
+          expiresIn: "2d",
+        }
+      );
+      res.status(200).json({ status: "valid user", JWT_TOKEN: token });
+    } else {
+      res.status(501).json({ status: "Not valid user" });
+    }
+  } catch (error) {
+    res.status(500).send({
+      message: error.message,
+    });
+  }
+});
+
+// Middleware function to verify the token
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization; // Get the token from the request headers
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY); // Verify the token using the secret key
+    req.user = decoded; // Attach the decoded user information to the request object
+    next(); // Call the next middleware or route handler
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid token" });
+  }
+};
+
+// Check if user is already logged in
+app.get("/auth", verifyToken, (req, res) => {
+  // If the token is valid, the user is logged in
+  res.json({ loggedIn: true, user: req.user });
+});
+
 
 //-------------ROOT PAGE ------------
 app.get("/", (req, res) => {
@@ -224,5 +259,4 @@ app.use((req, res) => {
 //-------------Server Listen------------
 app.listen(port, async () => {
   console.log(`Server is running at http://localhost:${port}`);
-  await connectDB(); // Connection function called when server is running
 });
