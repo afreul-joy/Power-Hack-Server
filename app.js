@@ -106,8 +106,10 @@ app.put("/api/update-billing/:id", async (req, res) => {
       { _id: id },
       {
         $set: {
-          name: req.body.name, // set new value for this update
+          name: req.body.name,
           email: req.body.email,
+          phone: req.body.phone,
+          amount: req.body.amount,
         },
       },
       { new: true } // showing updated data in api
